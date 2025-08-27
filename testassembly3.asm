@@ -5,7 +5,7 @@ MOV CX,12
 MOV SI,OFFSET MSG1
 DISP:
     MOV AH,2
-    MOV DL,BX[SI]
+    MOV DL,[SI]
     INT 21H
     
     INC SI
