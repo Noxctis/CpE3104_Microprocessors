@@ -1,75 +1,78 @@
-ORG 100h
+org 100h
 
-; --- Setup video memory segment ---
-MOV AX, 0B800h
-MOV ES, AX
+start:
+    ; ensure DS = CS (safe for .COM before using data)
+    push cs
+    pop  ds
 
-; --- Display prompt ---
-LEA SI, prompt
-MOV DI, 0           ; Start at top-left corner
+; --- Display prompt using BIOS teletype ---
+    lea si, prompt
 print_prompt:
-    MOV AL, [SI]
-    CMP AL, 0
-    JE done_prompt
-    MOV AH, 07h         ; Attribute: light gray on black
-    MOV [ES:DI], AL     ; Write character
-    MOV [ES:DI+1], AH   ; Write attribute
-    ADD DI, 2           ; Move to next screen cell
-    INC SI
-    JMP print_prompt
+    mov al, [si]
+    cmp al, 0
+    je  done_prompt
+    mov ah, 0Eh          ; teletype output
+    xor bh, bh           ; page 0
+    mov bl, 07h          ; light gray on black
+    int 10h
+    inc si
+    jmp print_prompt
 done_prompt:
 
-; --- Read and echo initials ---
-CALL read_and_echo
-MOV first, AL
+; --- Read and echo initials (BIOS keyboard) ---
+    call read_and_echo
+    mov  [first],  al
 
-CALL read_and_echo
-MOV middle, AL
+    call read_and_echo
+    mov  [middle], al
 
-CALL read_and_echo
-MOV last, AL
+    call read_and_echo
+    mov  [last],   al
 
-; --- Display initials vertically in first column ---
-MOV CX, 0              ; Line counter (row index)
-MOV AL, first
-CALL print_left_column
+; --- Display initials vertically ---
+    call new_line
+    mov  al, [first]
+    call print_char
+    call new_line
+    mov  al, [middle]
+    call print_char
+    call new_line
+    mov  al, [last]
+    call print_char
+    call new_line
 
-MOV AL, middle
-CALL print_left_column
+; --- Exit cleanly ---
+    mov ax, 4C00h
+    int 21h
 
-MOV AL, last
-CALL print_left_column
+; ===== Subroutines =====
 
-RET
-
-; --- Subroutine: Read and echo a character ---
+; Read a key (BIOS) and echo it using teletype
 read_and_echo:
-    MOV AH, 00h
-    INT 16h
-    ; Echo to screen
-    MOV AH, 07h
-    MOV BX, DI         ; Save DI
-    MOV DI, 1600       ; Echo at bottom of screen (row 25)
-    MOV [ES:DI], AL
-    MOV [ES:DI+1], AH
-    MOV DI, BX         ; Restore DI
-    RET
+    mov ah, 00h          ; BIOS wait for key
+    int 16h              ; AL = char
+    ; echo the same AL
+    call print_char
+    ret
 
-; --- Subroutine: Print character in left column ---
-print_left_column:
-    MOV AH, 07h
-    MOV DI, CX
-    SHL DI, 1          ; Multiply by 2 (each cell = 2 bytes)
-    SHL DI, 5          ; Multiply by 32 (2 * 16 = 32)
-    SHL DI, 1          ; Multiply by 2 again (32 * 2 = 64)
-    ; Now DI = row * 160 (80 cols * 2 bytes)
-    MOV [ES:DI], AL
-    MOV [ES:DI+1], AH
-    INC CX             ; Next row
-    RET
+; Print AL using BIOS teletype (page 0, attr 07h)
+print_char:
+    mov ah, 0Eh
+    xor bh, bh
+    mov bl, 07h
+    int 10h
+    ret
 
-; --- Data section ---
-prompt DB 'Enter your initials (first, middle, last): ', 0
-first DB ?
-middle DB ?
-last DB ?
+; Print CRLF
+new_line:
+    mov al, 13           ; CR
+    call print_char
+    mov al, 10           ; LF
+    call print_char
+    ret
+
+; ===== Data =====
+prompt db 'Enter your initials (first, middle, last): ', 0
+first  db ?
+middle db ?
+last   db ?
