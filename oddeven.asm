@@ -1,12 +1,9 @@
-; ============
-; COM template
-; ============
+
 org 100h
 
-    jmp start                 ; skip over data to the code
+    jmp start                 
 
-; -----------------
-; Data definitions
+
 ; -----------------
 MSG1 db 'Enter a digit (0-9): $'
 EVEN_MSG db 13,10,'The number is EVEN.$'
@@ -28,7 +25,7 @@ start:
     ; Input a character from keyboard
     mov ah, 01h
     int 21h
-    sub al, '0'               ; convert ASCII -> number (0–9)
+    sub al, '0'               
 
     ; Check if even or odd
     test al, 1                ; test least significant bit
