@@ -27,15 +27,17 @@ _START:
 
     mov bx, 0                 ; base register = 0
     mov si, 0000h             ; index = 0
-
+    
+    mov bx, offset DATA1
+    
     ; ---- copy first source word into DATA1 ----
-    mov ax, [bx + si + DATA3] ; load word at DATA4 (1234h) into AX
-    mov [bx + si + DATA1], ax ; store into DATA1
+    mov ax, [si + DATA3] ; load word at DATA4 (1234h) into AX
+    mov [bx + si], ax ; store into DATA1
 
     ; ---- copy second source word into DATA2 ----
     ADD si, 0002h             ; index = 2
-    mov ax, [bx + si + DATA3] ; load word at DATA4+2 (4567h)
-    mov [bx + si + DATA1], ax ; store into DATA1+2 = DATA2
+    mov ax, [si + DATA3] ; load word at DATA4+2 (4567h)
+    mov [bx + si], ax ; store into DATA1+2 = DATA2
 
     ; ---- program exit ----
     mov ax, 4C00h
