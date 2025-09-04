@@ -9,7 +9,7 @@ prompt  db 'Input a string: $'
 outhdr  db 13,10,'Output:',13,10,'$'   ; CRLF + "Output:" + CRLF
 crlf    db 13,10,'$'
 
-BUFMAX  equ 80
+BUFMAX  equ 20
 inbuf   db BUFMAX          ; [0] maximum chars to read
         db 0               ; [1] actual count (excludes CR)
         db BUFMAX dup(?)   ; [2..] characters (CR stored by DOS after them)
