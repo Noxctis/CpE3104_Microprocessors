@@ -96,7 +96,7 @@ DISP_MESS:
     mov  dx, OFFSET QUIT_MSG
     int  21h
 
-    ; "ENTER CHOICE: " at (14,15) — leave cursor right after it
+    ; "ENTER CHOICE: " at (14,15) u leave cursor right after it
     mov  ah, 02h
     mov  dh, 14
     mov  dl, 15h
@@ -107,7 +107,7 @@ DISP_MESS:
     ret
 
 ; -------------------------------------------------
-; HORIZONTAL STRIPES (4×6 rows; row 24 painted to match)
+; HORIZONTAL STRIPES (4-6 rows; row 24 painted to match)
 ; -------------------------------------------------
 HORIZONTAL:
     call CLEAR_SCREEN
@@ -116,22 +116,22 @@ HORIZONTAL:
     mov  ah, 06h
     xor  al, al
     mov  bh, 0Fh
-    mov  cx, 0000h
-    mov  dx, 054Fh
+    mov  cx, 0000h   ; TOP ROW = 0 LEFT COL = 0
+    mov  dx, 054Fh   ; BOTTOM ROW = 5 COLUMN = 79 
     int  10h
 
     ; rows 6..11 (white on magenta, 5Fh)
     mov  ah, 06h
     xor  al, al
-    mov  bh, 5Fh
-    mov  cx, 0600h
-    mov  dx, 0B4Fh
+    mov  bh, 0DFh; 5DF for dark magenta 
+    mov  cx, 0600h    ; CH = 06h (top row = 6),  CL = 00h (left col = 0)
+    mov  dx, 0B4Fh    ; DH = 0Bh (bottom row = 11), DL = 4Fh (right col = 79)
     int  10h
 
-    ; rows 12..17 (white on brown˜yellow, 6Fh)
+    ; rows 12..17 (white on yellow, 6Fh)
     mov  ah, 06h
     xor  al, al
-    mov  bh, 6Fh
+    mov  bh, 0EFh ; 6F for dark yellow
     mov  cx, 0C00h
     mov  dx, 114Fh
     int  10h
@@ -139,7 +139,7 @@ HORIZONTAL:
     ; rows 18..23 (white on blue, 1Fh)
     mov  ah, 06h
     xor  al, al
-    mov  bh, 1Fh
+    mov  bh, 90h  ;10 for dark white on blue text
     mov  cx, 1200h
     mov  dx, 174Fh
     int  10h
@@ -147,7 +147,7 @@ HORIZONTAL:
     ; row 24 also blue
     mov  ah, 06h
     xor  al, al
-    mov  bh, 1Fh
+    mov  bh, 90h; white on blue text
     mov  cx, 1800h
     mov  dx, 184Fh
     int  10h
@@ -168,12 +168,12 @@ HORIZONTAL:
     jmp  MAIN_PANEL
 
 ; -------------------------------------------------
-; VERTICAL STRIPES (4×20 cols)
+; VERTICAL STRIPES (20 cols)
 ; -------------------------------------------------
 VERTICAL:
     call CLEAR_SCREEN
 
-    ; cols 0..19 (0Fh)
+    ; cols 0..19 (0Fh)  black
     mov  ah, 06h
     xor  al, al
     mov  bh, 0Fh
@@ -181,26 +181,26 @@ VERTICAL:
     mov  dx, 1813h
     int  10h
 
-    ; cols 20..39 (5Fh)
+    ; cols 20..39 (5Fh)  magenta
     mov  ah, 06h
     xor  al, al
-    mov  bh, 5Fh
+    mov  bh, 0D0h ;5DF for dark magenta on white
     mov  cx, 0014h
     mov  dx, 1827h
     int  10h
-
-    ; cols 40..59 (6Fh)
+                           
+    ; cols 40..59 (6Fh)    yellow
     mov  ah, 06h
     xor  al, al
-    mov  bh, 6Fh
+    mov  bh, 0E0h  ;E for yellow 0 for black / F for white
     mov  cx, 0028h
     mov  dx, 183Bh
     int  10h
 
-    ; cols 60..79 (1Fh)
+    ; cols 60..79 (1Fh)     blue
     mov  ah, 06h
     xor  al, al
-    mov  bh, 1Fh
+    mov  bh, 9Fh ;1F for dark blue
     mov  cx, 003Ch
     mov  dx, 184Fh
     int  10h
