@@ -70,7 +70,7 @@ done_count:
     mov ah, 09h
     int 21h
 
-    ; print count in decimal (only 0-9) i doubt theres a word with more than 9 vowels?
+    ; print count in decimal (only 0-9) i doubt theres a word with more than 9 vowels? anyways it breaks because theres a gap between numbers and letters and extra logic is needed if i want to print in Hex
     mov ax, cx
     add al, '0' ; since the counter is in decimal we add the hex value of 0 to make it hex value of a decimal in register to print it
     mov dl, al  ; intterupt write character to standard output. entry: DL = character to write, after execution AL = DL.
