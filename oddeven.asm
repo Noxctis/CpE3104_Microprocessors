@@ -5,6 +5,8 @@ org 100h
 
 
 ; -----------------
+; Data definitions
+; -----------------
 MSG1 db 'Enter a digit (0-9): $'            ; define byte(1 char) my prompt ending with $ for the interrupt
 EVEN_MSG db 13,10,'The number is EVEN.$'    ; newline (10) and cret(13) acts like enter
 ODD_MSG  db 13,10,'The number is ODD.$'

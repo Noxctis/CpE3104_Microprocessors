@@ -3,7 +3,7 @@
 ; ============
 org 100h
 
-    jmp start                   ; jump over data
+    jmp start:                   ; jump over data
 
 ; -----------------
 ; Data definitions
