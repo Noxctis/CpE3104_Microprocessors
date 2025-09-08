@@ -4,10 +4,7 @@ jmp start
 
 
 MSG1 db 'Stored string = ',0
-EVEN_MSG db 'The number is EVEN.',0
-ODD_MSG  db 'The number is ODD.',0
-VALUE db '7',?
-attr db 0x9E
+attr db 0x01
 STORED db 'hello world',0
 RESULT db 'The string contains ',0
 SUFFIX db ' vowels',0
@@ -16,13 +13,13 @@ SUFFIX db ' vowels',0
 start:
     push cs
     pop ds
-    mov ax, 0B800h  ;video segment
-    mov es, ax      ;extra segment
+    mov ax, 0B800h  
+    mov es, ax      
 
-    ;row 12, column 30 - print MSG1
+    
     xor dx, dx
-    mov dl, 30
-    mov al, 12
+    mov dl, 0
+    mov al, 0
     xor ah, ah
     mov bl, 80
     mul bl
@@ -30,61 +27,60 @@ start:
     shl ax, 1
     mov di, ax
     mov si, offset MSG1
-.PrintMsg1:
+PrintHeader:
     mov al, [si]
     cmp al, 0
-    je .AfterMsg1
+    je AfterHeader
     mov es:[di], al
     mov al, [attr]
     mov es:[di+1], al
     add di, 2
     inc si
-    jmp .PrintMsg1
-.AfterMsg1:
+    jmp PrintHeader
+AfterHeader:
 
     ; print STORED on same row after MSG1
     mov si, offset STORED
-.PrintStored:
+PrintStoredString:
     mov al, [si]
     cmp al, 0
-    je .CountVowels
+    je CountVowels
     mov es:[di], al
     mov al, [attr]
     mov es:[di+1], al
     add di, 2
     inc si
-    jmp .PrintStored
+    jmp PrintStoredString
 
-.CountVowels:
+CountVowels:
     lea si, STORED
-    xor cx, cx        ;
-.VLoop: 
+    xor cx, cx        ; vowel count
+VowelLoop:
     mov al, [si]
     cmp al, 0
-    je .PrintResult
-    ;and al, 0DFh 
-    cmp al, 'a'
-    je .IncV
-    cmp al, 'e'
-    je .IncV
-    cmp al, 'i'
-    je .IncV
-    cmp al, 'o'
-    je .IncV
-    cmp al, 'u'
-    je .IncV
-    jmp .SkipV
-    
-.IncV:
+    je PrintResultLine
+    and al, 0DFh
+    cmp al, 'A'
+    je VowelInc
+    cmp al, 'E'
+    je VowelInc
+    cmp al, 'I'
+    je VowelInc
+    cmp al, 'O'
+    je VowelInc
+    cmp al, 'U'
+    je VowelInc
+    jmp VowelSkip
+VowelInc:
     inc cx
-.SkipV:
+VowelSkip:
     inc si
-    jmp .VLoop
+    jmp VowelLoop
 
-.PrintResult:
+PrintResultLine:
     ; move to next line row 13, column 30
-    mov al, 13
-    mov dl, 30
+    mov al, 1
+    mov dl, 0
     xor ah, ah
     mov bl, 80
     mul bl
@@ -94,18 +90,18 @@ start:
 
     ; print RESULT string
     mov si, offset RESULT
-.PResLoop:
+PrintResultLoop:
     mov al, [si]
     cmp al, 0
-    je .WriteCount
+    je WriteVowelCount
     mov es:[di], al
     mov al, [attr]
     mov es:[di+1], al
     add di, 2
     inc si
-    jmp .PResLoop
+    jmp PrintResultLoop
 
-.WriteCount:
+WriteVowelCount:
     mov al, cl
     add al, '0'
     mov es:[di], al
@@ -115,18 +111,18 @@ start:
     ; print suffix ' vowels'
     add di, 2
     mov si, offset SUFFIX
-.WriteSuffix:
+WriteSuffix:
     mov al, [si]
     cmp al, 0
-    je .Done
+    je ExitProg
     mov es:[di], al
     mov al, [attr]
     mov es:[di+1], al
     add di, 2
     inc si
-    jmp .WriteSuffix
+    jmp WriteSuffix
 
-.Done:
+ExitProg:
     ret
     ;mov ax, 4C00h
     ;int 21h
