@@ -8,7 +8,7 @@ EVEN_MSG db 'The number is EVEN.',0
 ODD_MSG  db 'The number is ODD.',0
 VALUE db '7',?
 attr db 0x9E
-STORED db 'hello world',0
+STORED db 'power of the people',0
 RESULT db 'The string contains ',0
 SUFFIX db ' vowels',0
 
