@@ -2,38 +2,58 @@ org 100h
 
 jmp start
 
-; three db style: stored string, result message, attribute
-STORED_STR db 'hello world',0
-MSG_HDR    db 13,10,'String contains ',0
-ATTR       db 0x0F
+PROMPT    db 'String contains:',0
+STORED    db 'hello world',0
+RESULT    db 'The number of vowels is ',0
+ATTR       db 0x9E
 
 start:
     push cs
     pop ds
-    ; set ES to video memory
     mov ax,0B800h
-    mov es,ax
-
-    ; print stored string at row 10, col 10
-    mov al,10
-    mov dl,10
+    mov es,ax    ;extra segment video buffer
+                          
+    ; print prompt at row 12, col 30
+    mov al,12
+    mov dl,30
     call CalcDI
-    lea si, STORED_STR
-.PrintStored:
+    lea si, PROMPT
+
+.PrintPrompt:
     mov al,[si]
     cmp al,0
-    je .AfterStored
+    je .AfterPrompt
     mov es:[di],al
     mov al,[ATTR]
     mov es:[di+1],al
     add di,2
     inc si
-    jmp .PrintStored
-.AfterStored:
+    jmp .PrintPrompt
 
-    ; count vowels in STORED_STR
-    lea si, STORED_STR
-    xor cx,cx        ; vowel count
+.AfterPrompt:
+
+    ; print stored string at row 12, col 47
+    mov al,12
+    mov dl,47
+    call CalcDI
+    lea si, STORED
+        ; print STORED at DI
+     .PrintStored:
+         mov al,[si]
+         cmp al,0
+         je .AfterStoredPrint
+         mov es:[di],al
+         mov al,[ATTR]
+         mov es:[di+1],al
+         add di,2
+         inc si
+         jmp .PrintStored
+     .AfterStoredPrint:
+
+    ; count vowels in STORED
+    lea si, STORED
+    xor cx,cx        ; vowel count reset
+
 CountLoop:
     mov al,[si]
     cmp al,0
@@ -50,18 +70,21 @@ CountLoop:
     cmp al,'U'
     je IncV
     jmp Skip
+
 IncV:
     inc cx
+    
 Skip:
     inc si
     jmp CountLoop
+    
 CountDone:
-
-    ; print header and count at row 12, col 10
-    mov al,12
-    mov dl,10
+    ; print RESULT at row 13, col 10
+    mov al,13
+    mov dl,30
     call CalcDI
-    lea si, MSG_HDR
+    lea si, RESULT
+
 .PrintHdr:
     mov al,[si]
     cmp al,0
@@ -72,6 +95,7 @@ CountDone:
     add di,2
     inc si
     jmp .PrintHdr
+
 .PrintCount:
     mov al, cl
     add al,'0'
@@ -79,10 +103,8 @@ CountDone:
     mov al,[ATTR]
     mov es:[di+1],al
 
-    ; hang
-    jmp $
+    ret
 
-; helper: CalcDI (AL=row, DL=col) -> DI byte offset in ES
 CalcDI:
     push bx
     mov ah,0
