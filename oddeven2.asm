@@ -6,6 +6,7 @@ jmp start
 MSG1 db 'Enter a digit (0-9): ',0
 EVEN_MSG db 'The number is EVEN.',0
 ODD_MSG  db 'The number is ODD.',0
+VALUE db '2',?
 attr db 0x9E
 
 
@@ -40,8 +41,8 @@ start:
                             
 .AfterPrompt:
 
-    ; Simulate ASCII input '4', echo it, then convert to numeric
-    mov al, '5'      ; ASCII input
+    ; ASCII input '5', echo it, then convert to decimal
+    mov al, [VALUE]      ; ASCII input
     mov bl, al       ; save ASCII in BL
     mov al, bl
     mov es:[di], al  ; echo character
@@ -50,10 +51,10 @@ start:
     add di, 2
 
     ;
-    sub bl, '0' ;ascii for 0  is 30 so minus 30 make it decimal
+    sub bl, '0' ;ascii for 0 is 30 so minus 30 make it decimal
     test bl, 1 ;if lsb is 1 or 0 makes it odd or even
-    jz .Even
-    jmp .Odd
+    jz .Even    ;if flag is 0 then it even
+    jmp .Odd    ;if flag 1 is odd
 
 .Even:
     ; Display EVEN_MSG at row 13, column 30
