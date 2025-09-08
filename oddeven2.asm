@@ -6,7 +6,7 @@ jmp start
 MSG1 db 'Enter a digit (0-9): ',0
 EVEN_MSG db 'The number is EVEN.',0
 ODD_MSG  db 'The number is ODD.',0
-VALUE db '2',?
+VALUE db '7',?
 attr db 0x9E
 
 
