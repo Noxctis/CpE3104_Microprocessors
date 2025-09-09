@@ -2,9 +2,6 @@ org 100h
 
 jmp start
 
-; -----------------
-; Data
-; -----------------
 HDR       db 'Input a string: ',0
 OUTHDR    db 'Output:',0
 STR       db 'Hello',0
@@ -16,22 +13,17 @@ ROW       db 0
 COL       db 0
 LEN       db 0
 
-; -----------------
-; Code
-; -----------------
 start:
     push cs
     pop  ds
-    mov  ax, 0B800h
-    mov  es, ax
+    mov  ax, 0B800h ; video segment
+    mov  es, ax     ; extra segment
 
-    ; init row/col
     mov al, [START_ROW]
     mov [ROW], al
     mov al, [START_COL]
     mov [COL], al
 
-    ; compute LEN of STR
     lea si, STR
     xor cx, cx
 count_len:
@@ -44,7 +36,7 @@ len_done:
     mov [LEN], cl
 
     ; line 1: "Input a string: " + "Hello"
-    call SET_POS
+    call SETDI
     lea  si, HDR
     call PRINT_Z
     lea  si, STR
@@ -54,20 +46,18 @@ len_done:
     mov al, [ROW]
     inc al
     mov [ROW], al
-    call SET_POS
+    call SETDI
     lea  si, OUTHDR
     call PRINT_Z
 
-    ; rotations: r = 0..LEN  (LEN+1 lines, ending with original)
-    xor dx, dx          ; DL = r = 0, DH free
+    xor dx, dx          
 rot_lines_loop:
     ; next output row
     mov al, [ROW]
     inc al
     mov [ROW], al
-    call SET_POS
+    call SETDI
 
-    ; SI = STR, CX = LEN, DL = r
     lea si, STR
     mov cl, [LEN]
     mov ch, 0
@@ -79,12 +69,8 @@ rot_lines_loop:
 
     ret
 
-; -----------------
-; Subroutines
-; -----------------
 
-; DI = ((ROW*80)+COL)*2
-SET_POS:
+SETDI:
     push ax
     push bx
     push dx
@@ -102,7 +88,7 @@ SET_POS:
     pop ax
     ret
 
-; print zero-terminated string at ES:DI with ATTR
+; print string
 PRINT_Z:
     push ax
 pz_loop:
@@ -118,30 +104,26 @@ pz_done:
     pop ax
     ret
 
-; PRINT_ROT
-;  SI = &STR, CX = LEN, DL = r (0..LEN)
-;  Prints exactly CX chars of rotation r
+
 PRINT_ROT:
     push ax
     push dx
     push si
 
-    xor dh, dh            ; i = 0
+    xor dh, dh            
 pr_loop:
     cmp dh, cl
     jae pr_done
-
-    ; index = (r + i) mod LEN  -> in BL (with BH=0)
-    mov al, dl            ; AL = r
-    add al, dh            ; AL = r + i
+    mov al, dl            
+    add al, dh            
     cmp al, cl
     jb  no_wrap
     sub al, cl
 no_wrap:
     xor bh, bh
-    mov bl, al            ; BX = index (0..LEN-1)
+    mov bl, al            
 
-    mov al, [bx+si]       ; <- VALID addressing form
+    mov al, [bx+si]       
     mov es:[di], al
     mov al, [ATTR]
     mov es:[di+1], al
