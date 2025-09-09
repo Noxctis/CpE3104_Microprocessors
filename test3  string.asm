@@ -1,135 +1,157 @@
-; ============
-; COM template
-; ============
-org 100h                   
+org 100h
 
-    jmp start:
+jmp start
 
 ; -----------------
-; Data definitions
+; Data
 ; -----------------
-; no interrupts version: hardcoded input copied into DATAIN
-BUFMAX  equ 80
-inbuf   db BUFMAX          ; keep layout for compatibility
-LENG    db 0               ; will hold actual length
-DATAIN  db BUFMAX dup(0)   ; storage for working string
-len     db 0               ; length of the input string
-; hardcoded source string
-SOURCE  db 'hello world',0
-SRCLEN  equ $-SOURCE
-; printing column and starting row
-PRINT_COL db 10
-PRINT_ROW db 10
+HDR       db 'Input a string: ',0
+OUTHDR    db 'Output:',0
+STR       db 'Hello',0
+ATTR      db 9Eh
+START_ROW db 12
+START_COL db 30
+
+ROW       db 0
+COL       db 0
+LEN       db 0
 
 ; -----------------
-; Code section
+; Code
 ; -----------------
 start:
-; setup DS
     push cs
     pop  ds
+    mov  ax, 0B800h
+    mov  es, ax
 
-    ; copy hardcoded SOURCE into DATAIN and set length
-    lea si, SOURCE
-    lea di, DATAIN
-    mov cx, SRCLEN
-    rep movsb
-    mov [LENG], cl
-    mov [len], cl
+    ; init row/col
+    mov al, [START_ROW]
+    mov [ROW], al
+    mov al, [START_COL]
+    mov [COL], al
 
-    ; set video segment for printing
-    mov ax, 0B800h
-    mov es, ax
+    ; compute LEN of STR
+    lea si, STR
+    xor cx, cx
+count_len:
+    lodsb
+    cmp al, 0
+    je  len_done
+    inc cx
+    jmp count_len
+len_done:
+    mov [LEN], cl
 
-    ; print the original string once
-    mov al, [PRINT_ROW]
-    mov dl, [PRINT_COL]
-    call PrintCurrent
+    ; line 1: "Input a string: " + "Hello"
+    call SET_POS
+    lea  si, HDR
+    call PRINT_Z
+    lea  si, STR
+    call PRINT_Z
 
-    ; if empty string, finish
-    mov  cl, [len]
-    mov  ch, 0
-    jcxz Done
+    ; line 2: "Output:"
+    mov al, [ROW]
+    inc al
+    mov [ROW], al
+    call SET_POS
+    lea  si, OUTHDR
+    call PRINT_Z
 
-; ---- Perform L right-rotations by 1 (so we end up back at the original) ----
-RotateLoop:
-    push cx                                          ; save remaining-rotations counter to stack
+    ; rotations: r = 0..LEN  (LEN+1 lines, ending with original)
+    xor dx, dx          ; DL = r = 0, DH free
+rot_lines_loop:
+    ; next output row
+    mov al, [ROW]
+    inc al
+    mov [ROW], al
+    call SET_POS
 
-    ; base = inbuf + 2  (first data byte)
-    lea  di, DATAIN
-    mov  cx, 0
-    mov  cl, [len]
-    add  di, cx                                      ; di = base + L
-    dec  di                                          ; di = base + L - 1  ? points at last char
-    mov  al, [di]                                    ; save last char (we move it to front)
+    ; SI = STR, CX = LEN, DL = r
+    lea si, STR
+    mov cl, [LEN]
+    mov ch, 0
+    call PRINT_ROT
 
-    ; Shift right by 1: copy bytes backward: memmove(base+1, base, L-1)
-    mov  si, di                                      ; si = base + L - 1
-    dec  si                                          ; si = base + L - 2  (source starts at old last-1)
-    mov  cx, 0
-    mov  cl, [len]
-    dec  cx                                          ; cx = L - 1  (number of bytes to move)
-    std                                              ; DF=1 so MOVSB goes backward (si--, di--)
-    rep  movsb                                       ; copy (L-1) bytes from [si]?[di] shifting right by 1
-    cld                                              ; DF=0 again (good practice for string ops?)
+    inc dl
+    cmp dl, [LEN]
+    jbe rot_lines_loop
 
+    ret
 
-    ; Put saved last char at base[0]
-    lea  di, DATAIN                               ; di = base (destination)
-    mov [di], al
+; -----------------
+; Subroutines
+; -----------------
 
-    ; advance print row for next rotation
-    inc byte [PRINT_ROW]
-
-    ; print this rotation (uses ES already)
-    mov al, [PRINT_ROW]
-    mov dl, [PRINT_COL]
-    call PrintCurrent
-
-    pop  cx                                          ; restore rotation counter
-    loop RotateLoop                                  ; do this L times total
-
-Done:
-    ; exit by hanging (no interrupts)
-    jmp $
-
-; -----------------------------------------------
-; PrintCurrent:
-;   Writes the current string (len bytes) to STDOUT, then Carraige return New line.
-;   Uses DOS INT 21h / AH=40h (Write to file/device).
-; -----------------------------------------------
-; PrintCurrent: write DATAIN (len bytes) to video memory at row=row (AL), col=DL
-PrintCurrent:
+; DI = ((ROW*80)+COL)*2
+SET_POS:
     push ax
     push bx
-    push si
-    push di
-    ; row in AL, col in DL
-    mov ah, 0
-    ; calculate DI in ES
+    push dx
+    xor ax, ax
+    mov al, [ROW]
     mov bl, 80
-    mul bl        ; AX = row * 80
-    add ax, dx    ; AX = row*80 + col
+    mul bl
+    xor dx, dx
+    mov dl, [COL]
+    add ax, dx
     shl ax, 1
     mov di, ax
-    ; SI = DATAIN
-    lea si, DATAIN
-    mov cx, 0
-    mov cl, [len]
-PrintLoop:
-    cmp cx, 0
-    je PrintDone
-    mov al, [si]
+    pop dx
+    pop bx
+    pop ax
+    ret
+
+; print zero-terminated string at ES:DI with ATTR
+PRINT_Z:
+    push ax
+pz_loop:
+    lodsb
+    cmp al, 0
+    je  pz_done
     mov es:[di], al
     mov al, [ATTR]
     mov es:[di+1], al
-    add si, 1
     add di, 2
-    dec cx
-    jmp PrintLoop
-PrintDone:
-    pop di
+    jmp pz_loop
+pz_done:
+    pop ax
+    ret
+
+; PRINT_ROT
+;  SI = &STR, CX = LEN, DL = r (0..LEN)
+;  Prints exactly CX chars of rotation r
+PRINT_ROT:
+    push ax
+    push dx
+    push si
+
+    xor dh, dh            ; i = 0
+pr_loop:
+    cmp dh, cl
+    jae pr_done
+
+    ; index = (r + i) mod LEN  -> in BL (with BH=0)
+    mov al, dl            ; AL = r
+    add al, dh            ; AL = r + i
+    cmp al, cl
+    jb  no_wrap
+    sub al, cl
+no_wrap:
+    xor bh, bh
+    mov bl, al            ; BX = index (0..LEN-1)
+
+    mov al, [bx+si]       ; <- VALID addressing form
+    mov es:[di], al
+    mov al, [ATTR]
+    mov es:[di+1], al
+    add di, 2
+
+    inc dh
+    jmp pr_loop
+
+pr_done:
     pop si
-    pop bx
+    pop dx
     pop ax
     ret
