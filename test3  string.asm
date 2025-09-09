@@ -2,9 +2,9 @@ org 100h
 
 jmp start
 
-HDR       db 'Input a string: ',0
+HDR       db 'Stored String: ',0
 OUTHDR    db 'Output:',0
-STR       db 'Hello',0
+STR       db 'sad',0
 ATTR      db 9Eh
 START_ROW db 12
 START_COL db 30
