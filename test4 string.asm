@@ -86,7 +86,7 @@ pz_done:
     ret
 
 
-PrintResultLine:
+PrintResultLine:   ;Calculate DI Location
     mov  al, [ROW]          
     xor  dx, dx         
     mov  dl, [COL]          
