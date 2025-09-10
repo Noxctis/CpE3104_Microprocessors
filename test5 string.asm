@@ -28,7 +28,7 @@ start:
     mov  al, [START_COL]
     mov  [COL], al
 
-    ; Row: "The strong string is: " + string
+    
     call POS_FROM_ROWCOL
     lea  si, hdr1
     call PRINT_Z
@@ -41,41 +41,42 @@ start:
     lea  si, hdr2
     call PRINT_Z
 
-    ; next row: original + all LEFT rotations
+    ; next row: 
     inc [ROW]
-    mov  cx, strlen+1          ; print original + all left-rotations
+    mov  cx, strlen+1          
 
 next_line:
     call POS_FROM_ROWCOL
     lea  si, string
     call PRINT_Z
 
-    ; ---- rotate string LEFT by 1 (in-place) ----
+   
     lea  si, string
-    mov  al, [si]              ; save first char
+    mov  al, [si]              
     mov  bx, si
     mov  dx, strlen
-    dec  dx                    ; DX = strlen-1 (moves to perform)
-    jz   rot_done_left         ; length 1 → no-op
+    dec  dx                     
+    jz   rot_done_left          
 
 rot_shift_left:
-    mov  ah, [bx+1]            ; shift each char one left
+    mov  ah, [bx+1]             
     mov  [bx], ah
     inc  bx
     dec  dx
     jnz  rot_shift_left
 
-    mov  [si+strlen-1], al     ; put original first char at end
+    mov  [si+strlen-1], al     
 rot_done_left:
 
     inc [ROW]            ; next row
     loop next_line
 
-hang: jmp hang
+hang: 
 
-; ---------------- helpers ----------------
+ret
 
-; PRINT_Z: print zero-terminated string at ES:DI using [attr]
+
+
 PRINT_Z:
     mov  ah, [attr]
 pz_loop:
@@ -88,15 +89,15 @@ pz_done:
     ret
 
 ; POS_FROM_ROWCOL: DI = ((ROW*80)+COL)*2
-; input: [ROW], [COL]
+
 POS_FROM_ROWCOL:
-    mov  al, [ROW]             ; AL = row
+    mov  al, [ROW]             
     xor  ah, ah
     mov  bl, 80
-    mul  bl                    ; AX = row*80
+    mul  bl                    
     xor  dx, dx
-    mov  dl, [COL]             ; DX = col
-    add  ax, dx                ; AX = row*80 + col
-    shl  ax, 1                 ; *2 bytes per cell
+    mov  dl, [COL]             
+    add  ax, dx                
+    shl  ax, 1                 
     mov  di, ax
     ret
