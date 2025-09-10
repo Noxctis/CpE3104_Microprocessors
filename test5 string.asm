@@ -36,13 +36,13 @@ start:
     call PRINT_Z
 
     ; next row: "Output:"
-    inc  byte [ROW]
+    inc [ROW]
     call POS_FROM_ROWCOL
     lea  si, hdr2
     call PRINT_Z
 
     ; next row: original + all LEFT rotations
-    inc  byte [ROW]
+    inc [ROW]
     mov  cx, strlen+1          ; print original + all left-rotations
 
 next_line:
@@ -68,7 +68,7 @@ rot_shift_left:
     mov  [si+strlen-1], al     ; put original first char at end
 rot_done_left:
 
-    inc  byte [ROW]            ; next row
+    inc [ROW]            ; next row
     loop next_line
 
 hang: jmp hang
