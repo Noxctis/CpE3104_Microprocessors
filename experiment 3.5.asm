@@ -216,7 +216,7 @@ HORIZONTAL:
     int  10h
     mov  ah, 09h                 
     mov  dx, OFFSET KEY_PROMPT
-    int  21h
+    int  21h    
 
     mov  ah, 00h                 
     int  16h
