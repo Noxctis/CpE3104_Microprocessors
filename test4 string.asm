@@ -3,9 +3,8 @@ jmp start
 
 attr       db 09Eh
 
-string     db 'hello'
-strlen     equ $ - string
-str0       db 0                    ; zero terminator for PRINT_Z
+string     db 'hello',0
+strlen     equ $ - string - 1 ;minus 1 because of the null terminator
 
 hdr1       db 'The strong string is: ',0
 hdr2       db 'Output:',0
@@ -23,43 +22,42 @@ start:
     mov  es, ax
     cld
 
-    ; load starting row/col
     mov  al, [START_ROW]
     mov  [ROW], al
     mov  al, [START_COL]
     mov  [COL], al
-
-    ; ---- Row: "The strong string is: " + string ----
-    call POS_FROM_ROWCOL
+    
+    ;header + string
+    call PrintResultLine
     lea  si, hdr1
     call PRINT_Z
     lea  si, string
     call PRINT_Z
 
-    ; next row
+    
     inc [ROW]
 
-    ; ---- Row: "Output:" ----
-    call POS_FROM_ROWCOL
+    ;output
+    call PrintResultLine
     lea  si, hdr2
     call PRINT_Z
 
-    ; next row
+    
     inc [ROW]
 
-    ; ---- Rows: original + all right-rotations ----
+    
     mov  cx, strlen+1
 
 next_line:
-    call POS_FROM_ROWCOL
+    call PrintResultLine
     lea  si, string
     call PRINT_Z
 
-    ; rotate string right by 1 (in place)
+    
     lea  si, string
     mov  bx, si
     add  bx, strlen-1
-    mov  al, [bx]           ; save last char
+    mov  al, [bx]           
 rshift:
     cmp  bx, si
     je   rot_done
@@ -70,34 +68,32 @@ rshift:
 rot_done:
     mov  [si], al
 
-    inc [ROW]         ; move to next row for next line
+    inc [ROW]         
     loop next_line
+    
+    ret
 
-hang: jmp hang
 
-; ---------------- helpers ----------------
-
-; PRINT_Z: print zero-terminated string at ES:DI using [attr]
 PRINT_Z:
     mov  ah, [attr]
 pz_loop:
-    lodsb
-    test al, al
-    jz   pz_done
-    stosw
+    lodsb         ;Load byte at DS:[SI] into AL. Update SI.
+    cmp al, 0
+    je   pz_done
+    stosw         ;Store word in AX into ES:[DI]. Update DI.
     jmp  pz_loop
 pz_done:
     ret
 
-; POS_FROM_ROWCOL: sets DI from current ROW/COL
-;   DI = ((ROW*80)+COL)*2
-POS_FROM_ROWCOL:
-    mov  al, [ROW]          ; AL=row
-    mov  dl, [COL]          ; DL=col
+
+PrintResultLine:
+    mov  al, [ROW]          
+    xor  dx, dx         
+    mov  dl, [COL]          
     mov  ah, 0
     mov  bl, 80
-    mul  bl                 ; AX = row*80
-    add  ax, dx             ; + col
-    shl  ax, 1              ; * 2 bytes per cell
+    mul  bl                 
+    add  ax, dx             
+    shl  ax, 1              
     mov  di, ax
     ret
