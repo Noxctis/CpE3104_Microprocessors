@@ -95,6 +95,10 @@ input_loop:
     pop  es
     rep movsb
     pop  es
+    ; zero-terminate STR[LEN] to avoid reading past end
+    xor bh, bh
+    mov bl, [LEN]
+    mov byte [STR+bx], 0
 
     ; compute MID = LEN/2
     mov al, [LEN]
@@ -125,6 +129,9 @@ input_loop:
     mov dl, 0
     call ERASE_LINE
 
+    ; clear CX so debugger doesn't show stale value (e.g., 0x50)
+    xor cx, cx
+
     jmp animate
 
 bad_input:
@@ -134,7 +141,6 @@ bad_input:
     call SETDI
     lea si, ERRMSG
     call PRINT_Z
-    call DELAY
     jmp input_loop
 
 animate:
@@ -152,7 +158,6 @@ animate:
 move_up_full:
     cmp [CURROW], 0
     je  at_top
-    call DELAY
     ; erase previous row
     mov al, [CURROW]
     mov dl, [STARTCOL]
@@ -214,7 +219,7 @@ move_outward:
 skip_left_out:
     jmp check_right_out
 do_left_out:
-    ; erase current left (no delay here)
+    ; erase current left
     mov al, 0
     mov dl, [LCOL]
     mov cl, [MID]
@@ -232,7 +237,7 @@ check_right_out:
     mov al, [RCOL]
     cmp al, [RTARGET]
     jae after_out_step
-    ; erase current right (no delay here)
+    ; erase current right
     mov al, 0
     mov dl, [RCOL]
     mov cl, [MID]
@@ -251,8 +256,6 @@ check_right_out:
     call DRAW_SEG
 
 after_out_step:
-    ; single small delay per frame
-    call DELAY
     ; if either still moving, loop
     mov al, [LCOL]
     cmp al, 0
@@ -269,7 +272,6 @@ after_out_step:
 move_down_three:
     cmp [CURROW], 24
     je  at_bottom_three
-    call DELAY
     ; erase at current row
     mov al, [CURROW]
     mov dl, [LCOL]
@@ -321,7 +323,7 @@ merge_horiz:
 skip_left_merge:
     jmp check_right_merge
 do_left_merge:
-    ; erase left at row 24 (no delay here)
+    ; erase left at row 24
     mov al, 24
     mov dl, [LCOL]
     mov cl, [MID]
@@ -344,7 +346,7 @@ check_right_merge:
 skip_right_merge:
     jmp after_merge_step
 do_right_merge:
-    ; erase right at row 24 (no delay here)
+    ; erase right at row 24
     mov al, 24
     mov dl, [RCOL]
     mov cl, [MID]
@@ -363,8 +365,6 @@ do_right_merge:
     call DRAW_SEG
 
 after_merge_step:
-    ; single small delay per frame
-    call DELAY
     ; loop until LCOL==STARTCOL and RCOL==CENTER_COL+1
     mov al, [LCOL]
     cmp al, [STARTCOL]
@@ -400,7 +400,6 @@ after_merge_step:
 move_up_to_center:
     cmp [CURROW], 12
     je  done
-    call DELAY
     ; erase current
     mov al, [CURROW]
     mov dl, [STARTCOL]
@@ -467,12 +466,12 @@ DRAW_SEG:
     call SETDI
     cmp cx, 0
     je  ds_done
+    ; optimize: use AH=ATTR and STOSW for each char
+    mov ah, [ATTR]
+    cld
 ds_loop:
-    lodsb
-    mov es:[di], al
-    mov al, [ATTR]
-    mov es:[di+1], al
-    add di, 2
+    lodsb              ; AL = next char
+    stosw              ; write AX (char+attr), DI+=2
     loop ds_loop
 ds_done:
     pop si
@@ -492,13 +491,11 @@ ERASE_SEG:
     call SETDI
     cmp cx, 0
     je  es_done
-es_loop:
+    ; optimize: space+attr once, then REP STOSW
     mov al, ' '
-    mov es:[di], al
-    mov al, [ATTR]
-    mov es:[di+1], al
-    add di, 2
-    loop es_loop
+    mov ah, [ATTR]
+    cld
+    rep stosw
 es_done:
     pop dx
     pop cx
@@ -543,13 +540,16 @@ ERASE_LINE:
     push ax
     push cx
     push dx
-    ; CX = remaining columns
     mov cl, COLS
     sub cl, dl
     ; CH cleared inside ERASE_SEG
     call ERASE_SEG
     pop dx
     pop cx
+    pop ax
+    ret
+    pop ax
+    ret
     pop ax
     ret
 
