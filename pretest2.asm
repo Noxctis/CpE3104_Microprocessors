@@ -117,6 +117,14 @@ input_loop:
     mov dl, 0
     call ERASE_LINE
 
+    ; clear prompt and input lines after successful input
+    mov al, 1
+    mov dl, 0
+    call ERASE_LINE
+    mov al, 2
+    mov dl, 0
+    call ERASE_LINE
+
     jmp animate
 
 bad_input:
@@ -206,8 +214,7 @@ move_outward:
 skip_left_out:
     jmp check_right_out
 do_left_out:
-    call DELAY
-    ; erase current left
+    ; erase current left (no delay here)
     mov al, 0
     mov dl, [LCOL]
     mov cl, [MID]
@@ -225,10 +232,7 @@ check_right_out:
     mov al, [RCOL]
     cmp al, [RTARGET]
     jae after_out_step
-    ; move right side
-    ; ensure a delay only once per combined step
-    call DELAY
-    ; erase current right
+    ; erase current right (no delay here)
     mov al, 0
     mov dl, [RCOL]
     mov cl, [MID]
@@ -247,6 +251,8 @@ check_right_out:
     call DRAW_SEG
 
 after_out_step:
+    ; single small delay per frame
+    call DELAY
     ; if either still moving, loop
     mov al, [LCOL]
     cmp al, 0
@@ -315,8 +321,7 @@ merge_horiz:
 skip_left_merge:
     jmp check_right_merge
 do_left_merge:
-    call DELAY
-    ; erase left at row 24
+    ; erase left at row 24 (no delay here)
     mov al, 24
     mov dl, [LCOL]
     mov cl, [MID]
@@ -339,8 +344,7 @@ check_right_merge:
 skip_right_merge:
     jmp after_merge_step
 do_right_merge:
-    call DELAY
-    ; erase right at row 24
+    ; erase right at row 24 (no delay here)
     mov al, 24
     mov dl, [RCOL]
     mov cl, [MID]
@@ -359,6 +363,8 @@ do_right_merge:
     call DRAW_SEG
 
 after_merge_step:
+    ; single small delay per frame
+    call DELAY
     ; loop until LCOL==STARTCOL and RCOL==CENTER_COL+1
     mov al, [LCOL]
     cmp al, [STARTCOL]
