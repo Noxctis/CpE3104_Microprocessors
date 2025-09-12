@@ -1,0 +1,62 @@
+
+ORG 100H
+    START:  MOV AX, 0B800H  ;   B800H indicates the segment address referring to the video memory
+            MOV DS, AX      ;   stores the the segment address into the DS register 
+            MOV DI, 0       ;   initializes the DI register to 0
+            MOV SI, 0       ;   initializes the SI register to 0
+    
+        
+    DISPLAY_LOOP:   CALL DISPLAY_NAME       ;   calls the block of code under the DISPLAY_NAME label
+                    CALL DELAY              ;   calls the block of code under the DELAY label
+                    CALL CLEAR_NAME         ;   calls the block of code under the CLEAR_NAME label
+                    
+                    MOV DI, SI              ;   copies the value of the SI register into the DI register
+                    CMP DI, 160             ;   compares the value of DI to the maximum bit capacity of the length of the emulator window
+                        JNE DISPLAY_LOOP    ;   when it is not equal to 160 yet, it calls the block of code under the DISPLAY_LOOP label 
+         
+RET 
+
+
+DISPLAY_NAME:   MOV AH, 0B1H    ;   initializes the color of both the background and the text. "B" indicates a cyan color, and "1" indicates a blue color
+                MOV AL, 'C'     ;   stores the ascii value of "" in AL register
+                MOV [DI], AX    ;   displays the letter and its initialized background and text color.
+                
+                ADD DI, 2       ;   adds the DI register by 2 since one character space in the window occupies two bytes
+                MOV AL, 'H'     ;   stores the ascii value of "" in AL register
+                MOV [DI], AX 
+                
+                ADD DI, 2       
+                MOV AL, 'S'     ;   stores the ascii value of "" in AL register
+                MOV [DI], AX 
+                
+                ADD DI, 2       
+                MOV AL, 'S'     ;   stores the ascii value of "" in AL register
+                MOV [DI], AX 
+                
+                ADD DI, 2       
+                MOV AL, 'S'     ;   stores the ascii value of "" in AL register
+                MOV [DI], AX 
+    
+RET
+
+     
+; ---------------------------------------------------------------------------
+; THE BLOCK OF CODE BELOW GENERATES A DELAY THROUGH LOOPED CX DECREMENTATION
+; ---------------------------------------------------------------------------    
+DELAY:  MOV CX, 1FH     ;   initializes the counter to 1FH that will act as a delay count
+    
+    HERE:   LOOP HERE   ;   loops to "HERE", decrementing CX until it reaches 0
+    
+RET
+
+       
+; -----------------------------------------------------------------------
+; THE BLOCK OF CODE BELOW CLEARS THE WRITTEN NAME
+; -----------------------------------------------------------------------     
+CLEAR_NAME: MOV CX, 5       ;   initializes the counter to 
+    
+    DELETE: MOV AX, 0       ;   resets the AX register, indicating no stored text, background color, nor text color
+            MOV [SI], AX    ;   clears the letter stored in the address value written in the SI register
+            ADD SI, 2       ;   adds the SI register by 2 since one character space in the window occupies two bytes
+            LOOP DELETE     ;   loops to "DELETE", decrementing CX until it reaches 0
+RET
