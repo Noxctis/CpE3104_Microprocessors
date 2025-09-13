@@ -15,6 +15,9 @@ InMax       db 16          ; maximum chars user may type
 InLen       db 0           ; actual chars read (unused here)
 InData      db 16 dup(0)   ; the typed data (not zero-terminated)
 
+; Hardcoded Fahrenheit input (change this value as needed)
+F_IN        dw 100         ; e.g., 100F -> 37C
+
 ; ----------------------------
 ; Code
 ; ----------------------------
@@ -23,22 +26,18 @@ start:
     push cs
     pop  ds
 
-input_loop:
-    ; show prompt
+; Direct conversion using hardcoded Fahrenheit value
+do_convert:
+    ; Show prompt and the hardcoded Fahrenheit value
     mov dx, offset prompt
     mov ah, 09h
     int 21h
+    mov ax, [F_IN]
+    call print_int
 
-    ; read a line into the buffer (0Ah)
-    mov dx, offset InMax
-    mov ah, 0Ah
-    int 21h
-
-    ; parse signed integer from InData -> AX, CF=1 on error
-    call parse_int
-    jc   input_bad
-
-    ; AX has Fahrenheit
+    ; Reload AX with Fahrenheit for conversion
+    mov ax, [F_IN]      ; AX = Fahrenheit (hardcoded)
+    
     ; Celsius = (F - 32) * 5 / 9  (signed, trunc toward 0)
     sub ax, 32
     cwd                 ; sign-extend into DX
@@ -47,10 +46,12 @@ input_loop:
     mov bx, 9
     idiv bx             ; AX = Celsius
 
-    ; print label + result
+    ; print label + result (preserve AX across DOS 09h)
+    push ax                   ; save Celsius
     mov dx, offset res_label
     mov ah, 09h
     int 21h
+    pop  ax                   ; restore Celsius
     call print_int
 
     ; finish message
@@ -64,16 +65,10 @@ input_loop:
     mov ax, 4C00h
     int 21h
 
-input_bad:
-    mov dx, offset err_msg
-    mov ah, 09h
-    int 21h
-    jmp input_loop
-
 ; ---------------------------------------------------------
 ; parse_int
 ;   Parses a signed decimal integer from DOS 0Ah buffer.
-;   Ignores InLen; reads InData until 0Dh (carriage return).
+;   Uses InLen to limit parsing (more robust than scanning for 0Dh).
 ;   Allows leading/trailing spaces, optional '+'/'-'.
 ;   Returns: AX = value, CF = 0 on success, CF = 1 on error.
 ;   Destroys: AX,BX,CX,DX,SI,DI (but restores via pushes).
@@ -85,77 +80,84 @@ parse_int:
     push si
     push di
 
-    lea si, InData      ; SI points to first typed char
+    lea si, InData           ; SI -> first typed char
+    xor cx, cx
+    mov cl, [InLen]          ; CX = number of chars typed (no CR)
+    jcxz pi_err              ; empty line
 
-; skip leading spaces
+; skip leading spaces (bounded by CX)
 pi_skip_lead:
-    mov al, [si]
-    cmp al, 0Dh
-    je  pi_err          ; blank line ? error
-    cmp al, ' '
+    cmp byte ptr [si], ' '
     jne pi_sign
     inc si
-    jmp pi_skip_lead
+    loop pi_skip_lead        ; dec cx; jnz
+    jmp pi_err               ; all spaces -> error
 
-; optional sign
+; optional sign (if chars remain)
 pi_sign:
-    xor dl, dl          ; DL = 0 => positive, 1 => negative
-    mov al, [si]
-    cmp al, '+'
+    xor dl, dl               ; DL = 0 => positive, 1 => negative
+    jcxz pi_err              ; nothing left
+    cmp byte ptr [si], '+'
     jne pi_chk_minus
     inc si
+    dec cx
     jmp pi_need_digit
 
 pi_chk_minus:
-    cmp al, '-'
+    cmp byte ptr [si], '-'
     jne pi_need_digit
     mov dl, 1
     inc si
+    dec cx
 
 ; must start with a digit
 pi_need_digit:
-    mov al, [si]
-    cmp al, '0'
+    jcxz pi_err
+    mov bl, [si]
+    cmp bl, '0'
     jb  pi_err
-    cmp al, '9'
+    cmp bl, '9'
     ja  pi_err
 
-    xor ax, ax          ; AX = result
+    xor ax, ax               ; AX = result
 
-; read digits
+; read digits (bounded by CX)
 pi_digits:
-    mov al, [si]
-    cmp al, '0'
+    jcxz pi_after_digits
+    mov bl, [si]
+    cmp bl, '0'
     jb  pi_after_digits
-    cmp al, '9'
+    cmp bl, '9'
     ja  pi_after_digits
 
-    ; AX = AX*10 + digit (8086-safe multiply by 10)
+    ; AX = AX*10 + digit
     mov di, ax
-    shl di, 1           ; *2
-    shl di, 1           ; *4
-    shl di, 1           ; *8
-    shl ax, 1           ; *2
-    add ax, di          ; *10 total
+    shl di, 1                ; *2
+    shl di, 1                ; *4
+    shl di, 1                ; *8
+    shl ax, 1                ; *2
+    add ax, di               ; *10 total
 
-    mov bl, [si]
     sub bl, '0'
     xor bh, bh
     add ax, bx
 
     inc si
+    dec cx
     jmp pi_digits
 
-; allow trailing spaces, then require CR
+; allow trailing spaces (consume remaining spaces)
 pi_after_digits:
+    jcxz pi_apply_sign
 pi_trim_trail:
-    mov al, [si]
-    cmp al, 0Dh
-    je  pi_apply_sign
-    cmp al, ' '
-    jne pi_err
+    cmp byte ptr [si], ' '
+    jne pi_check_leftover
     inc si
-    jmp pi_trim_trail
+    loop pi_trim_trail
+
+pi_check_leftover:
+    jcxz pi_apply_sign       ; ok if nothing remains
+    jmp pi_err               ; leftover non-space chars -> error
 
 ; apply sign from DL
 pi_apply_sign:
